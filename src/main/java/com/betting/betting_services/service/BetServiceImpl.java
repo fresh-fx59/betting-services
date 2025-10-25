@@ -2,9 +2,10 @@ package com.betting.betting_services.service;
 
 import com.betting.betting_services.entity.Bet;
 import com.betting.betting_services.entity.OutboxEvent;
+import com.betting.betting_services.model.BetDto;
 import com.betting.betting_services.model.BetMessage;
-import com.betting.betting_services.model.BetRequest;
-import com.betting.betting_services.model.BetResponse;
+import com.betting.betting_services.model.JackpotContributionDto;
+import com.betting.betting_services.model.JackpotRewardDto;
 import com.betting.betting_services.repository.BetRepository;
 import com.betting.betting_services.repository.OutboxEventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,18 +23,20 @@ public class BetServiceImpl implements BetService {
     private final BetRepository betRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final JackpotContributionService jackpotContributionService;
+    private final JackpotRewardService jackpotRewardService;
 
     @Override
     @Transactional
-    public BetResponse placeBet(BetRequest request) {
+    public BetDto placeBet(BetDto betDto) {
         log.info("Placing bet for user: {}, jackpot: {}, amount: {}",
-                request.getUserId(), request.getJackpotId(), request.getBetAmount());
+                betDto.getUserId(), betDto.getJackpotId(), betDto.getBetAmount());
 
         // Save bet to database
         Bet bet = Bet.builder()
-                .userId(request.getUserId())
-                .jackpotId(request.getJackpotId())
-                .betAmount(request.getBetAmount())
+                .userId(betDto.getUserId())
+                .jackpotId(betDto.getJackpotId())
+                .betAmount(betDto.getBetAmount())
                 .build();
 
         Bet savedBet = betRepository.save(bet);
@@ -66,13 +69,28 @@ public class BetServiceImpl implements BetService {
             throw new RuntimeException("Failed to create outbox event", e);
         }
 
-        return BetResponse.builder()
-                .betId(savedBet.getId())
+        BetDto savedBetDto = BetDto.builder()
+                .id(savedBet.getId())
                 .userId(savedBet.getUserId())
                 .jackpotId(savedBet.getJackpotId())
                 .betAmount(savedBet.getBetAmount())
                 .createdAt(savedBet.getCreatedAt())
-                .message("Bet placed successfully")
                 .build();
+
+        // Step 2: Contribute to jackpot pool
+        jackpotContributionService.contribute(savedBetDto)
+                .ifPresentOrElse(
+                        contribution -> log.info("Jackpot contribution successful: {}", contribution),
+                        () -> log.warn("No jackpot contribution made for bet ID: {}", savedBetDto.getId())
+                );
+
+        // Step 3: Evaluate for jackpot reward
+        jackpotRewardService.evaluate(savedBetDto)
+                .ifPresentOrElse(
+                        reward -> log.info("Jackpot reward awarded: {}", reward),
+                        () -> log.debug("Bet ID: {} not eligible for jackpot reward", savedBetDto.getId())
+                );
+
+        return savedBetDto;
     }
 }

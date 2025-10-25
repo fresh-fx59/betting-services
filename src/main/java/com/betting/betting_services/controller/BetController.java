@@ -1,7 +1,7 @@
 package com.betting.betting_services.controller;
 
-import com.betting.betting_services.model.BetRequest;
-import com.betting.betting_services.model.BetResponse;
+import com.betting.betting_services.model.ApiResponse;
+import com.betting.betting_services.model.BetDto;
 import com.betting.betting_services.service.BetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,14 +23,14 @@ public class BetController {
     private final BetService betService;
 
     @PostMapping
-    public ResponseEntity<BetResponse> placeBet(@Valid @RequestBody BetRequest request) {
-        log.info("Received bet request: {}", request);
+    public ResponseEntity<ApiResponse<BetDto>> placeBet(@Valid @RequestBody BetDto betDto) {
+        log.info("Received bet request: {}", betDto);
 
-        BetResponse response = betService.placeBet(request);
+        BetDto response = betService.placeBet(betDto);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(response);
+                .body(ApiResponse.success(response, "Bet placed successfully"));
     }
 
     @GetMapping("/health")

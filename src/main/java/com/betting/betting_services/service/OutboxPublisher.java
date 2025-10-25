@@ -5,6 +5,7 @@ import com.betting.betting_services.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OutboxPublisher {
 
-    private static final String TOPIC = "jackpot-bets";
     private static final int MAX_RETRIES = 3;
+
+    @Value("${kafka.topic.jackpot-bets}")
+    private String jackpotBetsTopic;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final OutboxEventRepository outboxEventRepository;
@@ -38,12 +41,12 @@ public class OutboxPublisher {
         for (OutboxEvent event : pendingEvents) {
             try {
                 // Publish to Kafka
-                kafkaTemplate.send(TOPIC, event.getAggregateId(), event.getPayload())
+                kafkaTemplate.send(jackpotBetsTopic, event.getAggregateId(), event.getPayload())
                         .whenComplete((result, ex) -> {
                             if (ex == null) {
                                 markAsPublished(event);
                                 log.info("Successfully published event ID: {} to topic: {}",
-                                        event.getId(), TOPIC);
+                                        event.getId(), jackpotBetsTopic);
                             } else {
                                 handlePublishFailure(event, ex);
                             }
