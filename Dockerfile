@@ -1,6 +1,9 @@
 # Multi-stage build
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 
+# Add build arg to bust cache when needed
+ARG CACHEBUST=1
+
 WORKDIR /app
 
 # Copy pom.xml and download dependencies (cached layer)

@@ -519,6 +519,41 @@ Response shows user won $10,020, and jackpot is reset to $10,000.
 
 ---
 
+## Usage Options with docker and cache
+
+1. Standard rebuild (uses cache for dependencies):
+
+```bash
+   docker-compose up -d --build betting-app
+```
+
+2. Force fresh build (busts cache):
+```bash
+   CACHEBUST=$(date +%s) docker-compose up -d --build betting-app
+```
+3. Complete clean rebuild:
+```bash
+   ./mvnw clean package -DskipTests && \
+   CACHEBUST=$(date +%s) docker-compose up -d --build betting-app
+```
+4. Nuclear option (rebuilds everything from scratch):
+```bash
+   docker-compose build --no-cache betting-app
+   docker-compose up -d betting-app
+```
+Recommended Workflow
+
+For daily development, use this command:
+```bash
+./mvnw clean package -DskipTests && docker-compose up -d --build betting-app
+```
+This will:
+1. Build a fresh JAR file
+2. Docker will detect the changed JAR and rebuild the image
+3. Restart the container with the new code
+
+The `CACHEBUST` arg is there as a backup if Docker still doesn't detect changes - just add it to force a rebuild.
+
 ## License
 
 This project is for educational purposes.

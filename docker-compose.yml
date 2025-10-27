@@ -82,6 +82,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        CACHEBUST: ${CACHEBUST:-1}
     container_name: betting-app
     depends_on:
       postgres:
